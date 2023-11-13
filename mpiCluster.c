@@ -2,13 +2,22 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#define MAX_SIZE 1000
+// 5 Arrays of 1000 elements max each
+#define MAX_SIZE 10000
+#define MAX_COLS 7
 #define SEND_DATA_TAG 2001
 #define RETURN_DATA_TAG 2002
 
-// Arrays
-int array1[MAX_SIZE];
-int array2[MAX_SIZE];
+//** Arrays **//
+
+// Master Matrix
+int matrix[MAX_COLS][MAX_SIZE];
+
+// Slave Array
+int array[MAX_SIZE];
+
+// Temp
+int tmp[MAX_SIZE];
 
 int main(int argc, char *argv[]) {
 
@@ -16,6 +25,8 @@ int main(int argc, char *argv[]) {
     long int totalSum, partialSum;
     MPI_Status status;
     int init, numProcs, pID, rootProcess, aID, numRowsToReceive, avgRowsPerProcess, sender, numRowsReceived, startRow, endRow, numRowsToSend;
+
+    // Size = 10 elements per array
     int numRows = 10;
 
     // Warning handler
@@ -31,10 +42,6 @@ int main(int argc, char *argv[]) {
     // Finding out the IDs and Number of processes
     init = MPI_Comm_rank(MPI_COMM_WORLD, &pID);
     init = MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
-    
-    
-
-    // printf("Processing! Process %i out of %i processes\n", id, numProcs);
 
     // If 0 = Root
     if(pID == rootProcess) {
@@ -48,15 +55,28 @@ int main(int argc, char *argv[]) {
         }
 
         // Data per Process
-        avgRowsPerProcess = numRows / numProcs;
+        avgRowsPerProcess = MAX_COLS / numProcs;
 
         // Initialize Array
-        for(int i = 0; i < numRows; i++) {
+        for(int i = 0; i < MAX_COLS; i++) {
 
-            array1[i] = i + 1;
+            // 5 Cols
+            for (int j = 0; j < numRows; j++) {
+                
+                // Starting from 1
+                matrix[i][j] = i * numRows + j + 1;
+            }
         }
 
-        // Distribute Array to Slaves; aID = Slaves ID
+        // Print Matrix
+        for (int i = 0; i < MAX_COLS; ++i) {
+            for (int j = 0; j < numRows; ++j) {
+                printf("%3d ", matrix[i][j]);
+            }
+            printf("\n");
+        }
+
+        // Distribute Matrix to Slaves; aID = Slaves ID
         for(aID = 1; aID < numProcs; aID++) {
 
             // Start Value
@@ -71,19 +91,42 @@ int main(int argc, char *argv[]) {
                 endRow = numRows - 1;
             }
 
-            numRowsToSend = endRow - startRow + 1;
+            numRowsToSend = (endRow - startRow + 1) * numRows;
+
+            printf("Numbers to Sum in Slave: %i\n", numRowsToSend);
 
             // Sending Amount of Data
             init = MPI_Send(&numRowsToSend, 1, MPI_INT, aID, SEND_DATA_TAG, MPI_COMM_WORLD);
 
+            for(int i = 0; i < avgRowsPerProcess; i++) {
+                
+                for(int k = 0; k < numRows; k++) {
+
+                    tmp[i * numRows + k] = matrix[startRow + i][k];
+                }
+            }
+
+            // Print Matrix
+            // printf("Array Temp:\n");
+            // for (int j = 0; j < numRows * avgRowsPerProcess; ++j) {
+
+            //     printf("%3d ", tmp[j]);
+            // }
+            // printf("\n");
+     
             // Sending Array Address - Starting Point in Array
-            init = MPI_Send(&array1[startRow], numRowsToSend, MPI_INT, aID, SEND_DATA_TAG, MPI_COMM_WORLD);
+            init = MPI_Send(&tmp[0], numRowsToSend, MPI_INT, aID, SEND_DATA_TAG, MPI_COMM_WORLD);
         }
 
         // Sum Calculation
         totalSum = 0;
+
         for(int i = 0; i < avgRowsPerProcess + 1; i++) {
-            totalSum += array1[i];
+
+            for(int j = 0; j < numRows; j++) {
+
+                totalSum += matrix[i][j];
+            }
         }
 
         printf("Total %li calculated by Root\n", totalSum);
@@ -107,21 +150,28 @@ int main(int argc, char *argv[]) {
     else {
 
         printf("I'm a Slave, process %i out of %i Processes\n", pID, numProcs);
+
         // Receiving Amount of Data
         init = MPI_Recv(&numRowsToReceive, 1, MPI_INT, rootProcess, SEND_DATA_TAG, MPI_COMM_WORLD, &status);
 
         // Receiving Array Address
-        init = MPI_Recv(&array2, numRowsToReceive, MPI_INT, rootProcess, SEND_DATA_TAG, MPI_COMM_WORLD, &status);
+        init = MPI_Recv(&array, numRowsToReceive, MPI_INT, rootProcess, SEND_DATA_TAG, MPI_COMM_WORLD, &status);
 
         // Amount of Data received
         numRowsReceived = numRowsToReceive;
+
+        printf("Numbers received from Master: %i\n", numRowsReceived);
 
         // Partial Sum Calculation
         partialSum = 0;
         for(int i = 0; i < numRowsReceived; i++) {
 
-            partialSum += array2[i];
+            partialSum += array[i];
+            // HEre
+            // printf("%3d", array[i]);
         }
+        // Here
+        // printf("\n");
 
         // Sending Partial Sum
         init = MPI_Send(&partialSum, 1, MPI_LONG, rootProcess, RETURN_DATA_TAG, MPI_COMM_WORLD);
