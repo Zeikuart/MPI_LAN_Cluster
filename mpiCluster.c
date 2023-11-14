@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     MPI_Status status;
     int init, numProcs, pID, rootProcess, aID, numRowsToReceive, avgRowsPerProcess, sender, numRowsReceived, startRow, endRow, numRowsToSend;
 
-    // Size = 10 elements per array
+    // Size = 1000 elements per array
     int numRows = 1000;
 
     // Warning handler
@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
 
                 if (file) {
 
-                    fprintf(file, "num_values = %d computed value = %3.15ld in %3.15f seconds\n", (numRows * iter * MAX_COLS), totalSum, run_time);
+                    fprintf(file, "num_values = %d computed value = %ld in %3.15f seconds\n", (numRows * iter * MAX_COLS), totalSum, run_time);
 
                     fclose(file);
 
