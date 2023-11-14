@@ -1,7 +1,7 @@
 CC = gcc
 MPIC = mpicc
 MPIR = mpirun
-CFLAGS = -Wall
+CFLAGS = -Wall -fopenmp
 OPT = -O2
 NP = -np 2
 
@@ -22,4 +22,4 @@ run: mpiCluster
 	$(MPIR) $(NP) ./$^
 
 clean:
-	rm -f main mpiCluster
+	rm -f main mpiCluster results/mpi_loop_*.txt plotly_graph.html
