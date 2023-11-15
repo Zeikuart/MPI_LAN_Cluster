@@ -19,7 +19,7 @@ mpiCluster: mpiCluster.c
 #	$(MPIR) $(NP) ./$^
 
 run: mpiCluster
-	$(MPIR) $(NP) ./$^
+	$(MPIR) $(NP) -hosts master,worker1 ./$^
 
 clean:
 	rm -f main mpiCluster results/mpi_loop_*.txt plotly_graph.html
